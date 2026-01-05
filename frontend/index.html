@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VGG16 Feature API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <div class="page">
+    <div class="panel">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Image Embedding Demo</p>
+          <h1>Test your VGG16 feature extractor</h1>
+          <p class="lede">Upload an image, send it to the Flask API, and inspect the embedding preview and stats.</p>
+        </div>
+        <div class="chip" title="Model origin">{{ model_source }}</div>
+      </header>
+
+      <form id="upload-form" class="form" enctype="multipart/form-data">
+        <label for="image" class="label">Select an image</label>
+        <div class="input-row">
+          <input id="image" name="image" type="file" accept="image/*" required />
+          <button type="submit" class="btn">Send to API</button>
+        </div>
+        <p class="hint">Max 8 MB. We send to /api/predict and show the first 10 embedding values.</p>
+      </form>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Preview</h2>
+          <div id="preview" class="preview">No image selected</div>
+        </div>
+        <div class="card">
+          <h2>API Response</h2>
+          <pre id="response" class="response">Waiting for a request…</pre>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const fileInput = document.getElementById('image');
+    const preview = document.getElementById('preview');
+    const responseBox = document.getElementById('response');
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        preview.textContent = 'No image selected';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.innerHTML = `<img src="${e.target.result}" alt="Preview" />`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const file = fileInput.files[0];
+      if (!file) {
+        responseBox.textContent = 'Please choose an image file first.';
+        return;
+      }
+      const formData = new FormData();
+      formData.append('image', file);
+
+      responseBox.textContent = 'Sending…';
+
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          body: formData
+        });
+        const payload = await res.json();
+        const pretty = JSON.stringify(payload, null, 2);
+        responseBox.textContent = pretty;
+      } catch (err) {
+        responseBox.textContent = `Request failed: ${err.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
